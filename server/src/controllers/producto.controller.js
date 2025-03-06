@@ -1,19 +1,19 @@
 import { executeRequest } from "../utils/dbHandler.js";
-
+import sql from 'mssql';
 
 const getProducto = async (req, res) => {
     try {
-        const palabra = req.query;
-        const query = `select p.codigo,p.nombreProducto,p.precio,s.cantidad
-                        from producto p inner join stock s
-                        on p.idProducto=s.idStock
-                        inner join marca m
-                        on m.idMarca=p.idMarca
-                        where p.nombreProducto like 'moto%'
-                        and p.idMarca=2
-                        order by p.nombreProducto`;
-        const result = await executeRequest({ query });
-        console.log("Resultado de getProducto:", result);
+        const { palabra } = req.query;
+        //console.log(palabra)
+        const result = await executeRequest({
+            query: 'sp_consultaPrecioProducto',
+            inputs: [
+              { name: 'busqueda', type: sql.VarChar, value: palabra },
+              { name: 'opcion', type: sql.Int, value: 2 }
+            ],
+            isStoredProcedure: true
+          });
+        //console.log("Resultado de getProducto:", result);
 
         res.status(200).json({
             mensaje: "Consulta exitosa",
@@ -30,9 +30,10 @@ const getProducto = async (req, res) => {
 
 const getComboMarca = async (req, res) => {
     try {
-        
+        const { palabra } = req.query;
+
         const query =  `select idMarca,nombreMarca
-                        from [dbo].[funNombreMarca_tabla]('moto')
+                        from [dbo].[funNombreMarca_tabla]('${palabra}')
                         order by nombreMarca`;
         const result = await executeRequest({ query });
         console.log("Resultado de getComboMarca:", result);

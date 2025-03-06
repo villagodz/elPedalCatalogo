@@ -27,9 +27,11 @@ function App() {
     getMarcas();
   }, []);
 
-  const getProductos = async () => {
+  const getProductos = async ( filtro ) => {
     try {
-      const response = await axios.get("/api/producto");
+      const response = await axios.get("/api/producto", {
+        params: { palabra: filtro },
+      });
       const data = response.data.respuesta.recordset;
       setProductos(data);
     } catch (error) {
@@ -37,10 +39,13 @@ function App() {
     }
   };
 
-  const getMarcas = async () => {
+  const getMarcas = async ( filtro ) => {
     try {
-      const response = await axios.get("/api/marca");
+      const response = await axios.get("/api/producto/marca", {
+        params: { palabra: filtro },
+      });
       const data = response.data.respuesta.recordset;
+      console.log(data);
       setMarcas(data);
     } catch (error) {
       console.log("Error al obtener marcas:", error);
@@ -53,22 +58,18 @@ function App() {
     setCurrentPage(1); // reset a la página 1 al cambiar la marca
   };
 
-  // Filtrado por texto y marca
+  // Filtrado por texto y marca (versión segura)
   const productosFiltrados = productos.filter((producto) => {
-    const coincideTexto = producto.nombreProducto
-      .toLowerCase()
-      .includes(filtro.toLowerCase());
-
-    const coincideMarca = !marcaSeleccionada || producto.idMarca === marcaSeleccionada;
-
-    return coincideTexto && coincideMarca;
+    const coincideMarca = marcaSeleccionada === "" || 
+      producto.idMarca == marcaSeleccionada;
+    return coincideMarca;
   });
 
   // Lógica de paginación en el front
   const lastIndex = currentPage * itemsPerPage; // p.e. página 1 -> 6; página 2 -> 12; etc.
   const firstIndex = lastIndex - itemsPerPage;  // p.e. página 1 -> 0; página 2 -> 6; etc.
   const productosPaginados = productosFiltrados.slice(firstIndex, lastIndex);
-  
+
   // Cantidad total de páginas
   const totalPages = Math.ceil(productosFiltrados.length / itemsPerPage);
 
@@ -86,73 +87,92 @@ function App() {
     }
   };
 
+
   return (
     <Box sx={{ flexGrow: 1, padding: 2 }}>
-      {/* FILTRO POR TEXTO */}
-      <Box sx={{ display: 'flex', alignItems: 'center', marginTop: 2 }}>
-        <TextField
-          type="text"
-          variant="outlined"
-          placeholder="Buscar producto"
-          size="small"
-          value={filtro}
-          onChange={(e) => {
-            setFiltro(e.target.value);
-            setCurrentPage(1); // regresar a la página 1 al cambiar el texto
-          }}
-          sx={{ flexGrow: 1, marginRight: 2 }}
-        />
-      </Box>
-
-      {/* COMBO MARCAS */}
-      <Box sx={{ display: 'flex', alignItems: 'center', marginTop: 2 }}>
-        <FormControl size="small" sx={{ minWidth: 120, marginRight: 2 }}>
-          <InputLabel id="marca-label">Marca</InputLabel>
-          <Select
-            labelId="marca-label"
-            id="marca-select"
-            label="Marca"
-            value={marcaSeleccionada}
-            onChange={handleChangeMarca}
+      <Box>
+        {/* FILTRO POR TEXTO */}
+        <Box sx={{ display: 'flex', alignItems: 'center', marginTop: 2 }}>
+          <TextField
+            type="text"
+            variant="outlined"
+            placeholder="Buscar producto"
+            size="small"
+            value={filtro}
+            onChange={(e) => {
+              setFiltro(e.target.value);
+            }}
+            sx={{ flexGrow: 1, marginRight: 2 }}
+          />
+          <Button
+            variant="contained"
+            onClick={() => {getProductos(filtro), getMarcas(filtro), setCurrentPage(1)}}
           >
-            <MenuItem value="">Todas</MenuItem>
-            {marcas.map((marca) => (
-              <MenuItem key={marca.idMarca} value={marca.idMarca}>
-                {marca.nombreMarca}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Box>
-
-      {/* RENDERIZAR PRODUCTOS PAGINADOS */}
-      <Box sx={{ marginTop: 4 }}>
-        <Grid2 container spacing={2} sx={{ alignItems: "center" }}>
-          {productosPaginados.map((producto) => (
-            <Grid2
-              xs={12}
-              sm={6}
-              key={producto.codigo}
-              sx={{ alignItems: "center" }}
-            >
-              <TarjetaProductos producto={producto} />
-            </Grid2>
-          ))}
-        </Grid2>
-      </Box>
-
-      {/* BOTONES DE PAGINACIÓN */}
-      <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: 2 }}>
-        <Button onClick={prevPage} disabled={currentPage === 1}>
-          Anterior
-        </Button>
-        <Box sx={{ margin: '0 16px', alignSelf: 'center' }}>
-          Página {currentPage} de {totalPages}
+              Buscar
+          </Button>
         </Box>
-        <Button onClick={nextPage} disabled={currentPage === totalPages}>
-          Siguiente
-        </Button>
+
+        {/* COMBO MARCAS */}
+        <Box sx={{ display: 'flex', alignItems: 'center', marginTop: 2 }}>
+          <FormControl size="small" sx={{ minWidth: 120, marginRight: 2 }}>
+            <InputLabel id="marca-label">Marca</InputLabel>
+            <Select
+              labelId="marca-label"
+              id="marca-select"
+              label="Marca"
+              value={marcaSeleccionada}
+              onChange={handleChangeMarca}
+            >
+              <MenuItem value="">Todas</MenuItem>
+              {marcas.map((marca) => (
+                <MenuItem key={marca.idMarca} value={marca.idMarca}>
+                  {marca.nombreMarca}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+
+        {/* RENDERIZAR PRODUCTOS PAGINADOS */}
+        <Box sx={{ marginTop: 4 }}>
+          <Grid2 container spacing={2} sx={{ alignItems: "center" }}>
+            {productosPaginados.map((producto) => (
+              <Grid2
+                key={producto.codigo}
+                xs={6}    // ◀️ 2 columnas en móvil
+                sm={4}    // ◀️ 3 columnas en tablet
+                md={3}    // ◀️ 4 columnas en desktop
+                lg={2}  // ◀️ 5 columnas en pantallas grandes
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'center'
+                }}
+              >
+                <TarjetaProductos producto={producto} />
+              </Grid2>
+            ))}
+          </Grid2>
+        </Box>
+
       </Box>
+        {/* BOTONES DE PAGINACIÓN */}
+        {productosFiltrados.length === 0 ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: 2 }}>
+            <p>No se encontraron productos</p>
+          </Box>
+        ) : (
+          <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: 2 }}>
+            <Button onClick={prevPage} disabled={currentPage === 1}>
+              Anterior
+            </Button>
+            <Box sx={{ margin: '0 16px', alignSelf: 'center' }}>
+              Página {currentPage} de {totalPages}
+            </Box>
+            <Button onClick={nextPage} disabled={currentPage === totalPages}>
+              Siguiente
+            </Button>
+          </Box>
+        )}
     </Box>
   );
 }
